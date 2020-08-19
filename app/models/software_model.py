@@ -29,10 +29,16 @@ class Software(db.Model):
         return cls.query.filter_by(name=name).first()
 
     @classmethod
-    def update_software(cls, id, name=None, logo=None):
+    def update_name(cls, id, name=None, logo=None):
         record = cls.fetch_by_id(id)
         if name:
             record.name = name
+        db.session.commit()
+        return True
+
+    @classmethod
+    def update_logo(cls, id, logo=None):
+        record = cls.fetch_by_id(id)
         if logo:
             record.logo = logo
         db.session.commit()
