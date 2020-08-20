@@ -6,6 +6,7 @@ from .software_model import Software
 class Application(db.Model):
     __tablename__ = 'applications'
     id = db.Column(db.Integer, primary_key =True)
+    # name = db.Column(db.String(80), nullable=False)
     software_id = db.Column(db.Integer, db.ForeignKey('software.id'), nullable=False)
     software = db.relationship('Software', backref=db.backref("applications", single_parent=True, lazy=True))
     description = db.Column(db.String, nullable=False)
@@ -33,16 +34,22 @@ class Application(db.Model):
         return cls.query.filter_by(software_id=software_id).all()
 
     @classmethod
-    def update_application(cls, id, description=None, logo=None, price=None, download_link=None):
+    def update_application(cls, id, description=None, price=None, download_link=None):
         record = cls.fetch_by_id(id)
         if description:
             record.description = description
-        if logo:
-            record.logo = logo
         if price:
             record.price = price
         if download_link:
             record.download_link = download_link
+        db.session.commit()
+        return True
+
+    @classmethod
+    def update_logo(cls, id, logo=None):
+        record = cls.fetch_by_id(id)
+        if logo:
+            record.logo = logo
         db.session.commit()
         return True
 
