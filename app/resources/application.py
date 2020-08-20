@@ -77,7 +77,7 @@ class ApplicationList(Resource):
                 return {'message': 'The specified software does not exist for this application!'}, 400
 
             price = args['price']
-            download_link = args['download _link']
+            download_link = args['download_link']
 
             if image_file.filename == '':
                 return {'message':'No logo was found.'}, 400
@@ -90,7 +90,7 @@ class ApplicationList(Resource):
 
                 # Record this event in user's logs
                 log_method = 'post'
-                log_description = f'Added application {description} to software <{software_id}>'
+                log_description = f'Added application <{description}> to software <{software_id}>'
                 authorization = request.headers.get('Authorization')
                 auth_token  = {"Authorization": authorization}
                 record_user_log(auth_token, log_method, log_description)
@@ -250,7 +250,7 @@ class ApplicationList(Resource):
         try:
             db_applications = Application.fetch_by_software_id(software_id)
             applications = application_schemas.dump(db_applications)
-            if len(application) == 0:
+            if len(applications) == 0:
                 return {'message': 'These records do not exist.'}, 404
             return {'applications':applications}, 200
         except Exception as e:

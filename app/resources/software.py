@@ -112,7 +112,6 @@ class SoftwareFunctions(Resource):
             print('========================================')
             return{'message':'Could not retrieve this software.'}, 400
 
-
     @jwt_required
     @api.doc('Update Software Name')
     @api.expect(software_model)
