@@ -9,7 +9,7 @@ class License(db.Model):
     application_id = db.Column(db.Integer, db.ForeignKey('applications.id'), nullable=False)
     application = db.relationship('Application', backref=db.backref("licences", single_parent=True, lazy=True))
     key = db.Column(db.String(80), nullable=False)
-    status = = db.Column(db.String(25) default='available', nullable=False) # available, on_credit, sold
+    status = db.Column(db.String(25), default='available', nullable=False) # available, on_credit, sold
     created = db.Column(db.DateTime, default=datetime.utcnow(), nullable=False)
     updated = db.Column(db.DateTime, onupdate=datetime.utcnow(), nullable=True)
 
