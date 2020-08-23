@@ -45,7 +45,7 @@ class SoftwareList(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not retrieve any software.'}, 400
+            return{'message':'Could not retrieve any software.'}, 500
 
     @jwt_required
     @api.doc('Post Software')
@@ -91,7 +91,7 @@ class SoftwareList(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not submit software.'}, 400
+            return{'message':'Could not submit software.'}, 500
 
 @api.route('/<int:id>')
 @api.param('id', 'The software identifier.')
@@ -110,7 +110,7 @@ class SoftwareFunctions(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not retrieve this software.'}, 400
+            return{'message':'Could not retrieve this software.'}, 500
 
     @jwt_required
     @api.doc('Update Software Name')
@@ -155,7 +155,7 @@ class SoftwareFunctions(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not retrieve this software.'}, 400
+            return{'message':'Could not update this software.'}, 500
 
     @jwt_required
     @api.doc('Delete Software')
@@ -185,7 +185,7 @@ class SoftwareFunctions(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not delete this software.'}, 400
+            return{'message':'Could not delete this software.'}, 500
 
 
 @api.route('/logo/<int:id>')
@@ -235,4 +235,4 @@ class UpdateLogo(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not submit software logo.'}, 400
+            return{'message':'Could not update software logo.'}, 500
