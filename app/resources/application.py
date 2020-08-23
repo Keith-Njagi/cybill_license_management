@@ -8,6 +8,7 @@ from flask_jwt_extended import jwt_required, get_jwt_claims, get_jwt_identity
 
 from models.application_model import Application, ApplicationSchema
 from models.software_model import Software, SoftwareSchema
+from models.license_model import License, LicenseSchema
 from user_functions.record_user_log import record_user_log
 from user_functions.validate_logo import allowed_file
 
@@ -17,6 +18,7 @@ software_schema = SoftwareSchema()
 software_schemas = SoftwareSchema(many=True)
 application_schema = ApplicationSchema()
 application_schemas = ApplicationSchema(many=True)
+license_schemas = LicenseSchema(many=True)
 
 upload_parser = api.parser()
 upload_parser.add_argument('logo', location='files', type=FileStorage, required=True, help='Application Logo') # location='headers'
@@ -50,7 +52,7 @@ class ApplicationList(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not retrieve any applications.'}, 400
+            return{'message':'Could not retrieve any applications.'}, 500
 
     @jwt_required
     @api.expect(upload_parser)
@@ -77,7 +79,7 @@ class ApplicationList(Resource):
                 return {'message': 'The specified software does not exist for this application!'}, 400
 
             price = args['price']
-            download_link = args['download _link']
+            download_link = args['download_link']
 
             if image_file.filename == '':
                 return {'message':'No logo was found.'}, 400
@@ -90,7 +92,7 @@ class ApplicationList(Resource):
 
                 # Record this event in user's logs
                 log_method = 'post'
-                log_description = f'Added application {description} to software <{software_id}>'
+                log_description = f'Added application <{description}> to software <{software_id}>'
                 authorization = request.headers.get('Authorization')
                 auth_token  = {"Authorization": authorization}
                 record_user_log(auth_token, log_method, log_description)
@@ -101,26 +103,32 @@ class ApplicationList(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not submit application.'}, 400
+            return{'message':'Could not submit application.'}, 500
         
 
 @api.route('/<int:id>')
 @api.param('id', 'The Application Identifier')
 class ApplicationList(Resource):
     @api.doc('Get single application')
+    # include the count of application licenses
     def get(self, id):
         '''Get Single Application'''
         try:
             db_application = Application.fetch_by_id(id)
             application = application_schema.dump(db_application)
+
+            db_licenses = License.fetch_by_application_id(application_id=id)
+            licenses = license_schemas.dump(db_licenses)
+            license_count = len(licenses)
+
             if len(application) == 0:
                 return {'message': 'This antivirus application does not exist.'}, 404
-            return {'application':application}, 200
+            return {'application':application, 'licenses':license_count}, 200
         except Exception as e:
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not retrieve application.'}, 400
+            return{'message':'Could not retrieve application.'}, 500
         
 
     @jwt_required
@@ -159,7 +167,7 @@ class ApplicationList(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not update application.'}, 400
+            return{'message':'Could not update application.'}, 500
        
 
     @jwt_required
@@ -190,7 +198,7 @@ class ApplicationList(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not delete this application.'}, 400
+            return{'message':'Could not delete this application.'}, 500
 
 @api.route('/logo/<int:id>')
 @api.param('id', 'The Application Identifier')
@@ -239,7 +247,7 @@ class ApplicationList(Resource):
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not submit software logo.'}, 400
+            return{'message':'Could not submit software logo.'}, 500
 
 @api.route('/software/<int:software_id>')
 @api.param('software_id', 'The Software Identifier')
@@ -250,11 +258,11 @@ class ApplicationList(Resource):
         try:
             db_applications = Application.fetch_by_software_id(software_id)
             applications = application_schemas.dump(db_applications)
-            if len(application) == 0:
+            if len(applications) == 0:
                 return {'message': 'These records do not exist.'}, 404
             return {'applications':applications}, 200
         except Exception as e:
             print('========================================')
             print('Error description: ', e)
             print('========================================')
-            return{'message':'Could not retrieve application.'}, 400
+            return{'message':'Could not retrieve application.'}, 500

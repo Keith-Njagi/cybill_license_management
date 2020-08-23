@@ -12,7 +12,7 @@ class Application(db.Model):
     description = db.Column(db.String, nullable=False)
     logo = db.Column(db.String(80), nullable=False)
     price = db.Column(db.Float(precision=2), nullable=False)
-    download_link = = db.Column(db.String, nullable=False)
+    download_link = db.Column(db.String, nullable=False)
     created = db.Column(db.DateTime, default=datetime.utcnow(), nullable=False)
     updated = db.Column(db.DateTime, onupdate=datetime.utcnow(), nullable=True)
 

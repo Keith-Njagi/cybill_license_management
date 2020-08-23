@@ -4,7 +4,7 @@
 /app/models/__pycache__
 /app/resources/__pycache__
 /app/user_functions/__pycache__
-/app/uploads
+/app/uploads/*
 
 /test/__pycache__
 /test/resources/__pycache__
