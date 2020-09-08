@@ -3,6 +3,7 @@
 /app/configurations/__pycache__
 /app/models/__pycache__
 /app/resources/__pycache__
+/app/schemas/__pycache__
 /app/user_functions/__pycache__
 /app/uploads/*
 

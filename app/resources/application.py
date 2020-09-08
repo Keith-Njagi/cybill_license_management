@@ -4,21 +4,18 @@ from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_claims, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_claims, get_jwt_identity, jwt_optional
 
-from models.application_model import Application, ApplicationSchema
-from models.software_model import Software, SoftwareSchema
-from models.license_model import License, LicenseSchema
+from models.application import ApplicationModel
+from models.software import SoftwareModel
+from schemas.application import ApplicationSchema
 from user_functions.record_user_log import record_user_log
 from user_functions.validate_logo import allowed_file
 
 api = Namespace('application', description='Manage Antivirus Applications')
 
-software_schema = SoftwareSchema()
-software_schemas = SoftwareSchema(many=True)
 application_schema = ApplicationSchema()
 application_schemas = ApplicationSchema(many=True)
-license_schemas = LicenseSchema(many=True)
 
 upload_parser = api.parser()
 upload_parser.add_argument('logo', location='files', type=FileStorage, required=True, help='Application Logo') # location='headers'
@@ -39,25 +36,39 @@ application_model = api.model('Application', {
 
 @api.route('')
 class ApplicationList(Resource):
+    @classmethod
+    @jwt_optional
     @api.doc('Get all applications')
-    def get(self):
+    def get(cls):
         '''Get All Applications'''
         try:
-            db_application = Application.fetch_all()
-            applications = application_schemas.dump(db_application)
-            if len(applications) == 0:
-                return {'message': 'There are no antivirus applications yet.'}, 404
-            return {'applications':applications}, 200
+            claims = get_jwt_claims()
+            if claims:
+                if claims['is_admin']:
+                    applications = ApplicationModel.fetch_all()
+                    if applications:
+                        return application_schemas.dump(applications), 200
+                    return {'message': 'There are no antivirus applications yet.'}, 404
+            applications = ApplicationModel.fetch_all()
+            if applications:
+                application_list = application_schemas.dump(applications)
+                for application in application_list:
+                    license_count = len(application['licenses'])
+                    application['licenses'] = license_count
+                return application_list, 200
+            return {'message': 'There are no antivirus applications yet.'}, 404
+                
         except Exception as e:
             print('========================================')
             print('Error description: ', e)
             print('========================================')
             return{'message':'Could not retrieve any applications.'}, 500
 
+    @classmethod
     @jwt_required
     @api.expect(upload_parser)
     @api.doc('Post Application')
-    def post(self):
+    def post(cls):
         '''Post Application'''
         try:
             claims = get_jwt_claims()
@@ -73,32 +84,33 @@ class ApplicationList(Resource):
             if description == '':
                 return {'message':'You never included a description.'}, 400
 
-            this_software = Software.fetch_by_id(id=software_id)
-            software = software_schema.dump(this_software)
-            if len(software) == 0:
-                return {'message': 'The specified software does not exist for this application!'}, 400
+            software = SoftwareModel.fetch_by_id(id=software_id)
+            if software:
+                price = args['price']
+                download_link = args['download_link']
 
-            price = args['price']
-            download_link = args['download_link']
+                if image_file.filename == '':
+                    return {'message':'No logo was found.'}, 400
+                        
+                if image_file and allowed_file(image_file.filename):
+                    logo = secure_filename(image_file.filename)
+                    image_file.save(os.path.join( 'uploads', logo))
 
-            if image_file.filename == '':
-                return {'message':'No logo was found.'}, 400
-                    
-            if image_file and allowed_file(image_file.filename):
-                logo = secure_filename(image_file.filename)
-                image_file.save(os.path.join( 'uploads', logo))
-                new_application = Application(logo=logo,description=description, download_link=download_link, price=price, software_id=software_id)
-                new_application.insert_record()
+                    new_application = ApplicationModel(logo=logo,description=description, download_link=download_link, price=price, software_id=software_id)
+                    new_application.insert_record()
 
-                # Record this event in user's logs
-                log_method = 'post'
-                log_description = f'Added application <{description}> to software <{software_id}>'
-                authorization = request.headers.get('Authorization')
-                auth_token  = {"Authorization": authorization}
-                record_user_log(auth_token, log_method, log_description)
+                    # Record this event in user's logs
+                    log_method = 'post'
+                    log_description = f'Added application <{description}> to software <{software_id}>'
+                    authorization = request.headers.get('Authorization')
+                    auth_token  = {"Authorization": authorization}
+                    record_user_log(auth_token, log_method, log_description)
 
-                return {'software': software, 'application':description}, 201
-            return {'message':'The logo you uploaded is not recognised.'}, 400
+                    return {'application':description}, 201
+                return {'message':'The logo you uploaded is not recognised.'}, 400
+            return {'message': 'The specified software does not exist for this application!'}, 400
+
+            
         except Exception as e:
             print('========================================')
             print('Error description: ', e)
@@ -108,33 +120,31 @@ class ApplicationList(Resource):
 
 @api.route('/<int:id>')
 @api.param('id', 'The Application Identifier')
-class ApplicationList(Resource):
+class ApplicationDetail(Resource):
+    @classmethod
     @api.doc('Get single application')
     # include the count of application licenses
-    def get(self, id):
+    def get(cls, id:int):
         '''Get Single Application'''
         try:
-            db_application = Application.fetch_by_id(id)
-            application = application_schema.dump(db_application)
-
-            db_licenses = License.fetch_by_application_id(application_id=id)
-            licenses = license_schemas.dump(db_licenses)
-            license_count = len(licenses)
-
-            if len(application) == 0:
-                return {'message': 'This antivirus application does not exist.'}, 404
-            return {'application':application, 'licenses':license_count}, 200
+            application = ApplicationModel.fetch_by_id(id)
+            if application:
+                app = application_schema.dump(application)
+                license_count = len(app['licenses'])
+                app['licenses'] = license_count
+                return app, 200
+            return {'message': 'This antivirus application does not exist.'}, 404
         except Exception as e:
             print('========================================')
             print('Error description: ', e)
             print('========================================')
             return{'message':'Could not retrieve application.'}, 500
         
-
+    @classmethod
     @jwt_required
     @api.expect(application_model)
     @api.doc('Update Application')
-    def put(self, id):
+    def put(cls, id:int):
         '''Update Application'''
         try:
             claims = get_jwt_claims()
@@ -145,54 +155,50 @@ class ApplicationList(Resource):
             if not data:
                 return {'message':'No input data detected!'}, 400
 
-            description = data['description']
-            download_link = data['download_link']
-            price = data['price']
+            # description = data['description']
+            # download_link = data['download_link']
+            # price = data['price']
 
-            db_application = Application.fetch_by_id(id)
-            application = application_schema.dump(db_application)
-            if len(application) == 0:
-                return {'message': 'This record does not exist.'}, 404
+            application = ApplicationModel.fetch_by_id(id)
+            if application:
+                ApplicationModel.update_application(id=id, **data) # description=description, download_link=download_link, price=price)
 
-            Application.update_application(id=id, description=description, download_link=download_link, price=price)
-
-            # Record this event in user's logs
-            log_method = 'put'
-            log_description = f'Updated application <{id}>'
-            authorization = request.headers.get('Authorization')
-            auth_token  = {"Authorization": authorization}
-            record_user_log(auth_token, log_method, log_description)
-            return {'application':description}, 200
+                # Record this event in user's logs
+                log_method = 'put'
+                log_description = f'Updated application <{id}>'
+                authorization = request.headers.get('Authorization')
+                auth_token  = {"Authorization": authorization}
+                record_user_log(auth_token, log_method, log_description)
+                return application_schema.dump(application), 200
+            return {'message': 'This record does not exist.'}, 404
         except Exception as e:
             print('========================================')
             print('Error description: ', e)
             print('========================================')
             return{'message':'Could not update application.'}, 500
        
-
+    @classmethod
     @jwt_required
     @api.doc('Delete Application')
-    def delete(self, id):
+    def delete(cls, id:int):
         '''Delete Application'''
         try:
             claims = get_jwt_claims()
             if not claims['is_admin']:
                 return {'message':'You are not authorised to access this resource!'}, 403
 
-            my_application = Application.fetch_by_id(id)
-            application = application_schema.dump(my_application)
-            if len(application) == 0:
-                return {'message':'This record does not exist!'}, 404
+            application = ApplicationModel.fetch_by_id(id)
+            if application:
+                ApplicationModel.delete_by_id(id)
 
-            Application.delete_by_id(id)
-
-            # Record this event in user's logs
-            log_method = 'delete'
-            log_description = f'Deleted application <{id}>'
-            authorization = request.headers.get('Authorization')
-            auth_token  = { "Authorization": authorization}
-            record_user_log(auth_token, log_method, log_description)
-            return {'message': f'Deleted software <{id}>'}, 200
+                # Record this event in user's logs
+                log_method = 'delete'
+                log_description = f'Deleted application <{id}>'
+                authorization = request.headers.get('Authorization')
+                auth_token  = { "Authorization": authorization}
+                record_user_log(auth_token, log_method, log_description)
+                return {'message': f'Deleted software <{id}>'}, 200
+            return {'message':'This record does not exist!'}, 404
 
         except Exception as e:
             print('========================================')
@@ -202,11 +208,12 @@ class ApplicationList(Resource):
 
 @api.route('/logo/<int:id>')
 @api.param('id', 'The Application Identifier')
-class ApplicationList(Resource):
+class LogoDetail(Resource):
+    @classmethod
     @jwt_required
     @api.expect(logo_parser)
     @api.doc('Update Logo')
-    def put(self, id):
+    def put(cls, id:int):
         '''Update Logo'''
         try:
             claims = get_jwt_claims()
@@ -216,11 +223,8 @@ class ApplicationList(Resource):
             args = logo_parser.parse_args()
             image_file = args.get('logo')  # This is FileStorage instance
 
-
-            db_application = Application.fetch_by_id(id)
-            application = application_schema.dump(db_application)
-
-            if len(application) != 0:
+            application = ApplicationModel.fetch_by_id(id)
+            if application:
                 if image_file.filename == '':
                     return {'message':'No logo was found.'}, 400
                     
@@ -228,10 +232,7 @@ class ApplicationList(Resource):
                     logo = secure_filename(image_file.filename)
                     image_file.save(os.path.join( 'uploads', logo))
 
-                    Application.update_logo(id=id, logo=logo)
-
-                    new_db_application = Application.fetch_by_id(id)
-                    new_application = application_schema.dump(new_db_application)
+                    ApplicationModel.update_logo(id=id, logo=logo)
 
                     # Record this event in user's logs
                     log_method = 'put'
@@ -239,7 +240,7 @@ class ApplicationList(Resource):
                     authorization = request.headers.get('Authorization')
                     auth_token  = { "Authorization": authorization}
                     record_user_log(auth_token, log_method, log_description)
-                    return {'software': new_application}, 200
+                    return application_schema.dump(application), 200
                 return {'message':'The logo you uploaded is not recognised.'}, 400
             return {'message': 'This record does not exist!'}, 404
         
@@ -251,16 +252,20 @@ class ApplicationList(Resource):
 
 @api.route('/software/<int:software_id>')
 @api.param('software_id', 'The Software Identifier')
-class ApplicationList(Resource):
+class SoftwareApplicationList(Resource):
+    @classmethod
     @api.doc('Get applications by software')
-    def get(self, software_id):
+    def get(cls, software_id:int):
         '''Get Application by software'''
         try:
-            db_applications = Application.fetch_by_software_id(software_id)
-            applications = application_schemas.dump(db_applications)
-            if len(applications) == 0:
-                return {'message': 'These records do not exist.'}, 404
-            return {'applications':applications}, 200
+            applications = ApplicationModel.fetch_by_software_id(software_id)
+            if applications:
+                application_list = application_schemas.dump(applications)
+                for application in application_list:
+                    license_count = len(application['licenses'])
+                    application['licenses'] = license_count
+                return application_list, 200   
+            return {'message': 'These records do not exist.'}, 404         
         except Exception as e:
             print('========================================')
             print('Error description: ', e)
