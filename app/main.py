@@ -2,12 +2,14 @@ import os
 
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-from flask import Flask, Blueprint
+from flask import Flask, jsonify
 from flask_cors import CORS
+from marshmallow import ValidationError
 
 from configurations import *
 from resources import blueprint, jwt 
-from models import db, ma
+from models import db
+from schemas import ma
 
 app = Flask(__name__)
 
@@ -31,6 +33,11 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 def create_tables():
     db.create_all()
 
+@app.errorhandler(ValidationError)
+def handle_marshmallow_validation(err):
+    return jsonify(err.messages), 400
+
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3102)
+    app.run(host='0.0.0.0', port=3101)

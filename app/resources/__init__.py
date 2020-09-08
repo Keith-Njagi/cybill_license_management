@@ -19,7 +19,7 @@ authorizations = {
 }
 
 blueprint = Blueprint('api', __name__, url_prefix='/api')
-api = Api(blueprint, doc='/documentation', title='Credit management API', version='0.1', description='An API to manage Salesmen', authorizations=authorizations, security='apikey')
+api = Api(blueprint, doc='/documentation', title='License management API', version='0.1', description='An API to manage Antivirus Licenses', authorizations=authorizations, security='apikey')
 
 api.add_namespace(software)
 api.add_namespace(application)
