@@ -261,8 +261,8 @@ class CreditLicense(Resource):
 
             license_key = LicenseModel.fetch_by_id(id)
             if license_key:
-                status = 'on_credit'
-                LicenseModel.update_status(id, status=status)
+                license_status = 'on_credit'
+                LicenseModel.update_status(id, license_status=license_status)
 
                 # Record this event in user's logs
                 log_method = 'put'
@@ -293,8 +293,8 @@ class SellLicense(Resource):
 
             license_key = LicenseModel.fetch_by_id(id)
             if license_key:
-                status = 'sold'
-                LicenseModel.update_status(id, status=status)
+                license_status = 'sold'
+                LicenseModel.update_status(id, license_status=license_status)
 
                 # Record this event in user's logs
                 log_method = 'put'
@@ -328,8 +328,8 @@ class AvailLicense(Resource):
 
             license_key = LicenseModel.fetch_by_id(id)
             if license_key:
-                status = 'available'
-                LicenseModel.update_status(id, status=status)
+                license_status = 'available'
+                LicenseModel.update_status(id, license_status=license_status)
                 
                 # Record this event in user's logs
                 log_method = 'put'
