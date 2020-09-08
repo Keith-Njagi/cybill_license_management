@@ -30,17 +30,17 @@ class LicenseModel(db.Model):
         return cls.query.get(id)
 
     @classmethod
-    def update_status(cls, id:int, status:str=None) -> None:
+    def update_status(cls, id:int, license_status:str=None) -> None:
         record = cls.fetch_by_id(id)
-        if status:
-            record.status = status
+        if license_status:
+            record.license_status = license_status
         db.session.commit()
 
     @classmethod
-    def update_license(cls, id:int, key:str=None) -> None:
+    def update_license(cls, id:int, license_key:str=None) -> None:
         record = cls.fetch_by_id(id)
-        if key:
-            record.key = key
+        if license_key:
+            record.license_key = license_key
         db.session.commit()
 
     @classmethod
